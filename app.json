@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Kilix",
+    "slug": "kilix-app",
+    "version": "1.0.1",
+    "scheme": "kilix",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/images/kilix-app-icon.png",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kilix.app"
+    },
+    "android": {
+      "package": "com.kilix.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F8FA"
+      },
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "extra": {
+      "forcesRTL": true
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FF6B00",
+          "image": "./assets/images/kilix-splash.png",
+          "imageWidth": 300
+        }
+      ],
+      "./plugins/withKilixSplashFallback.js"
+    ]
+  }
+}
