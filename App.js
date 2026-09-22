@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { I18nManager, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -33,7 +33,7 @@ if (!I18nManager.isRTL) {
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
-  const [fontsLoaded] = useCairoFonts({
+  const [fontsLoaded, fontError] = useCairoFonts({
     Cairo_400Regular,
     Cairo_600SemiBold,
     Cairo_700Bold,
@@ -42,15 +42,19 @@ export default function App() {
     SpaceGrotesk_600SemiBold,
   });
 
-  const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded) {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
+  const fontsReady = fontsLoaded || !!fontError;
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  const hideSplashScreen = useCallback(async () => {
+    if (fontsReady) {
+      await SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsReady]);
+
+  useEffect(() => {
+    if (fontsReady) {
+      void SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsReady]);
 
   return (
     <ErrorBoundary>
@@ -59,7 +63,7 @@ export default function App() {
           <DataProvider>
             <CartProvider>
               <FavoritesProvider>
-                <View style={[styles.container, { backgroundColor: colors.background }]} onLayout={onLayoutRootView}>
+                <View style={[styles.container, { backgroundColor: colors.background }]} onLayout={hideSplashScreen}>
                   <StatusBar style="dark" />
                   <NavigationContainer>
                     <RootNavigator />
