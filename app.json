@@ -34,6 +34,9 @@
         }
       ],
       "./plugins/withKilixSplashFallback.js"
-    ]
+    ],
+    "experiments": {
+      "baseUrl": "/KILIXWEBAPP"
+    }
   }
 }
