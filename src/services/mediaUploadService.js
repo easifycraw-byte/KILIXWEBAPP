@@ -1,5 +1,6 @@
 import { supabase } from '../config/supabaseConfig';
 import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
 
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -18,11 +19,49 @@ const getFile = (fileUri) => {
 };
 
 /**
+ * يقرأ الملف من الجهاز على iOS/Android، أو من URI الخاص بالويب.
+ * في React Native Web يعيد Expo ImagePicker غالباً blob/data URI،
+ * وليس مسار ملف محلي يمكن لـ expo-file-system.File قراءته مباشرة.
+ */
+const getFileInfo = async (fileUri, providedMimeType = '') => {
+  if (!fileUri) throw new Error('مسار الملف غير موجود');
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(fileUri);
+    if (!response.ok) throw new Error('تعذر الوصول إلى الصورة المحددة');
+
+    const blob = await response.blob();
+    const type = String(providedMimeType || blob.type || '').toLowerCase();
+
+    return {
+      size: Number(blob.size) || 0,
+      type,
+      extension: type.startsWith('image/')
+        ? (type === 'image/png'
+          ? '.png'
+          : type === 'image/webp'
+            ? '.webp'
+            : '.jpg')
+        : type.startsWith('video/')
+          ? (type.includes('quicktime')
+            ? '.mov'
+            : type.includes('webm')
+              ? '.webm'
+              : '.mp4')
+          : '',
+      arrayBuffer: () => blob.arrayBuffer(),
+    };
+  }
+
+  return getFile(fileUri);
+};
+
+/**
  * ✅ الحصول على حجم الملف
  */
 export const getFileSizeFromUri = async (fileUri) => {
   try {
-    const file = getFile(fileUri);
+    const file = await getFileInfo(fileUri);
     return Number(file.size) || 0;
   } catch (error) {
     console.error('❌ Error getting file size:', error);
@@ -47,7 +86,7 @@ const getMimeAndExtension = (file, fallbackType = 'image', providedMimeType = ''
 
 const readFileBytes = async (fileUri) => {
   try {
-    return await getFile(fileUri).arrayBuffer();
+    return await getFileInfo(fileUri).then((file) => file.arrayBuffer());
   } catch (error) {
     console.error('❌ Error reading file bytes:', error);
     throw new Error('فشل قراءة الصورة/الملف من الجهاز');
@@ -66,7 +105,7 @@ export const uploadStoreLogo = async (fileUri, storeId, providedMimeType = '') =
   try {
     if (!fileUri || !storeId) throw new Error('بيانات صورة المتجر غير مكتملة');
 
-    const file = getFile(fileUri);
+    const file = await getFileInfo(fileUri, providedMimeType);
     const fileSize = Number(file.size) || 0;
     if (fileSize === 0) throw new Error('الملف فارغ أو تالف');
     if (fileSize > MAX_IMAGE_SIZE) throw new Error('حجم صورة المتجر يتجاوز 10MB');
@@ -102,7 +141,7 @@ export const uploadImage = async (fileUri, storeId, productId = null, providedMi
   try {
     if (!fileUri || !storeId) throw new Error('بيانات غير كاملة');
 
-    const file = getFile(fileUri);
+    const file = await getFileInfo(fileUri, providedMimeType);
     const fileSize = Number(file.size) || 0;
     if (fileSize === 0) throw new Error('الملف فارغ أو تالف');
     if (fileSize > MAX_IMAGE_SIZE) {
@@ -154,7 +193,7 @@ export const uploadVideo = async (fileUri, storeId, productId = null, providedMi
   try {
     if (!fileUri || !storeId) throw new Error('بيانات غير كاملة');
 
-    const file = getFile(fileUri);
+    const file = await getFileInfo(fileUri, providedMimeType);
     const fileSize = Number(file.size) || 0;
     if (fileSize === 0) throw new Error('الملف فارغ أو تالف');
     if (fileSize > MAX_VIDEO_SIZE) {
@@ -281,7 +320,7 @@ export const deleteMediaFile = async (publicUrl) => {
  */
 export const validateMediaFile = async (fileUri, fileType, mimeType = '') => {
   try {
-    const file = getFile(fileUri);
+    const file = await getFileInfo(fileUri, providedMimeType);
     const fileSize = Number(file.size) || 0;
     const detectedMime = String(mimeType || file.type || '').toLowerCase();
     const extension = String(file.extension || '').replace('.', '').toLowerCase();
