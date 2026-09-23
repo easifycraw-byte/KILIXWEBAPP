@@ -718,7 +718,7 @@ export default function CreateStoreScreen({ navigation }) {
         alert(validation.error);
         return;
       }
-      setStoreLogoUri(imageData.uri);
+      setStoreLogoUri(imageData.uri);\n      setStoreLogoFile(imageData.file || null);
     } catch (error) {
       if (__DEV__) console.error('[CreateStoreScreen] store logo picker error:', error);
       alert(error?.message || 'تعذر اختيار صورة المتجر.');
@@ -740,7 +740,7 @@ export default function CreateStoreScreen({ navigation }) {
       if (storeLogoUri) {
         setUploadingStoreLogo(true);
         try {
-          const logoUrl = await uploadStoreLogo(storeLogoUri, result.storeId);
+          const logoSource = storeLogoFile || storeLogoUri;\n          const logoUrl = await uploadStoreLogo(logoSource, result.storeId);
           await updateStoreService(result.storeId, { logo_url: logoUrl });
         } catch (logoError) {
           logoWarning = '\n⚠️ تم إنشاء المتجر، لكن تعذر رفع صورة المتجر. يمكنك المحاولة لاحقاً.';
