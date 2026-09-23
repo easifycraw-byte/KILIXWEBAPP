@@ -547,14 +547,15 @@ export default function CreateStoreScreen({ navigation }) {
         return;
       }
 
-      const validation = await validateMediaFile(imageData.uri, 'image', imageData.mimeType);
+      const mediaSource = imageData.file || imageData.uri;
+      const validation = await validateMediaFile(mediaSource, 'image', imageData.mimeType);
       if (!validation.isValid) {
         alert(validation.error);
         setUploadingNewImages(false);
         return;
       }
 
-      const downloadURL = await uploadImage(imageData.uri, currentStoreId, null, imageData.mimeType);
+      const downloadURL = await uploadImage(mediaSource, currentStoreId, null, imageData.mimeType);
       setNewImages([...newImages, downloadURL]);
       alert('تم رفع الصورة بنجاح!');
     } catch (error) {
@@ -634,14 +635,15 @@ export default function CreateStoreScreen({ navigation }) {
         return;
       }
 
-      const validation = await validateMediaFile(imageData.uri, 'image', imageData.mimeType);
+      const mediaSource = imageData.file || imageData.uri;
+      const validation = await validateMediaFile(mediaSource, 'image', imageData.mimeType);
       if (!validation.isValid) {
         alert(validation.error);
         setUploadingEditImages(false);
         return;
       }
 
-      const downloadURL = await uploadImage(imageData.uri, currentStoreId, selectedProduct.id, imageData.mimeType);
+      const downloadURL = await uploadImage(mediaSource, currentStoreId, selectedProduct.id, imageData.mimeType);
       setEditImages([...editImages, downloadURL]);
       alert('تم رفع الصورة بنجاح!');
     } catch (error) {
@@ -710,7 +712,8 @@ export default function CreateStoreScreen({ navigation }) {
       }
       const imageData = await pickImage();
       if (!imageData?.uri) return;
-      const validation = await validateMediaFile(imageData.uri, 'image', imageData.mimeType);
+      const mediaSource = imageData.file || imageData.uri;
+      const validation = await validateMediaFile(mediaSource, 'image', imageData.mimeType);
       if (!validation.isValid) {
         alert(validation.error);
         return;
