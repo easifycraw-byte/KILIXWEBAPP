@@ -41,8 +41,11 @@ export const pickImage = async () => {
       const asset = result.assets[0];
       return {
         uri: asset.uri,
-        fileName: asset.uri.split('/').pop() || `image_${Date.now()}.jpg`,
-        mimeType: asset.mimeType || 'image/jpeg',
+        // Expo ImagePicker يوفر على الويب كائن File الحقيقي للملف المحدد.
+        // الاحتفاظ به يمنع محاولة قراءة blob URI كأنه ملف محلي.
+        file: asset.file || null,
+        fileName: asset.fileName || asset.uri.split('/').pop() || `image_${Date.now()}.jpg`,
+        mimeType: asset.mimeType || asset.file?.type || 'image/jpeg',
       };
     }
 
@@ -106,8 +109,9 @@ export const pickMultipleImages = async () => {
     if (!result.canceled && result.assets) {
       return result.assets.map((asset) => ({
         uri: asset.uri,
-        fileName: asset.uri.split('/').pop() || `image_${Date.now()}.jpg`,
-        mimeType: asset.mimeType || 'image/jpeg',
+        file: asset.file || null,
+        fileName: asset.fileName || asset.uri.split('/').pop() || `image_${Date.now()}.jpg`,
+        mimeType: asset.mimeType || asset.file?.type || 'image/jpeg',
       }));
     }
 
