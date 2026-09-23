@@ -121,7 +121,7 @@ export default function CreateStoreScreen({ navigation }) {
   const [storeType, setStoreType] = useState('wholesaler');
   const [storeProductsType, setStoreProductsType] = useState('');
   const [storeDesc, setStoreDesc] = useState('');
-  const [storeLogoUri, setStoreLogoUri] = useState(null);
+  const [storeLogoUri, setStoreLogoUri] = useState(null);\n  const [storeLogoFile, setStoreLogoFile] = useState(null);
   const [uploadingStoreLogo, setUploadingStoreLogo] = useState(false);
   const [currency, setCurrency] = useState('دج');
   const [storeDocId, setStoreDocId] = useState(null);
@@ -750,7 +750,7 @@ export default function CreateStoreScreen({ navigation }) {
         }
       }
 
-      setStoreLogoUri(null);
+      setStoreLogoUri(null);\n      setStoreLogoFile(null);
       alert(`✅ تم إنشاء متجرك بنجاح!\n📌 معرف البحث: ${result.storeCode}${logoWarning}`);
       setCurrentScreen('orders');
     } catch (error) {
