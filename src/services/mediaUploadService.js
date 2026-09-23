@@ -1,5 +1,5 @@
 import { supabase } from '../config/supabaseConfig';
-import { File } from 'expo-file-system';
+import { File as ExpoFile } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
@@ -13,7 +13,7 @@ const BUCKET_NAME = 'media';
  */
 const getFile = (fileUri) => {
   if (!fileUri) throw new Error('مسار الملف غير موجود');
-  const file = new File(fileUri);
+  const file = new ExpoFile(fileUri);
   if (!file.exists) throw new Error('تعذر الوصول إلى الملف المحدد');
   return file;
 };
@@ -21,18 +21,42 @@ const getFile = (fileUri) => {
 const getFileInfo = async (fileSource, providedMimeType = '') => {
   if (!fileSource) throw new Error('الملف غير موجود');
 
-  // Web: استخدم كائن File الذي يعيده ImagePicker مباشرة.
-  if (typeof File !== 'undefined' && fileSource instanceof File) {
+  // Web: expo-image-picker returns the browser File object as asset.file.
+  // Detect it by the standard File/Blob binary interface rather than
+  // relying on instanceof, which can fail across browser realms.
+  if (
+    typeof fileSource === 'object' &&
+    typeof fileSource.arrayBuffer === 'function' &&
+    typeof fileSource.size === 'number'
+  ) {
     const type = String(providedMimeType || fileSource.type || '').toLowerCase();
     return {
       size: Number(fileSource.size) || 0,
       type,
-      extension: type === 'image/png' ? '.png' : type === 'image/webp' ? '.webp' : type.startsWith('image/') ? '.jpg' : '',
+      extension: type === 'image/png'
+        ? '.png'
+        : type === 'image/webp'
+          ? '.webp'
+          : type.startsWith('image/')
+            ? '.jpg'
+            : type.includes('quicktime')
+              ? '.mov'
+              : type.includes('webm')
+                ? '.webm'
+                : type.startsWith('video/')
+                  ? '.mp4'
+                  : '',
       arrayBuffer: () => fileSource.arrayBuffer(),
     };
   }
 
-  if (Platform.OS === 'web') {
+  // Native platforms: the URI is handled by Expo FileSystem's File API.
+  if (Platform.OS !== 'web') {
+    return getFile(fileSource);
+  }
+
+  // Web fallback for a URI/string returned by the picker.
+  try {
     const response = await fetch(fileSource);
     if (!response.ok) throw new Error('تعذر الوصول إلى الصورة المحددة');
     const blob = await response.blob();
@@ -40,12 +64,19 @@ const getFileInfo = async (fileSource, providedMimeType = '') => {
     return {
       size: Number(blob.size) || 0,
       type,
-      extension: type === 'image/png' ? '.png' : type === 'image/webp' ? '.webp' : type.startsWith('image/') ? '.jpg' : '',
+      extension: type === 'image/png'
+        ? '.png'
+        : type === 'image/webp'
+          ? '.webp'
+          : type.startsWith('image/')
+            ? '.jpg'
+            : '',
       arrayBuffer: () => blob.arrayBuffer(),
     };
+  } catch (error) {
+    console.error('❌ Web file read error:', error);
+    throw new Error('تعذر قراءة الملف المحدد من المتصفح');
   }
-
-  return getFile(fileSource);
 };
 
 /**
@@ -83,9 +114,9 @@ const getMimeAndExtension = (file, fallbackType = 'image', providedMimeType = ''
     : { mime: 'image/jpeg', ext: 'jpg' };
 };
 
-const readFileBytes = async (fileUri) => {
+const readFileBytes = async (fileSource) => {
   try {
-    return await getFileInfo(fileUri).then((file) => file.arrayBuffer());
+    return await getFileInfo(fileSource).then((file) => file.arrayBuffer());
   } catch (error) {
     console.error('❌ Error reading file bytes:', error);
     throw new Error('فشل قراءة الصورة/الملف من الجهاز');
