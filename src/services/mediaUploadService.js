@@ -350,7 +350,7 @@ export const deleteMediaFile = async (publicUrl) => {
  */
 export const validateMediaFile = async (fileUri, fileType, mimeType = '') => {
   try {
-    const file = await getFileInfo(fileUri, providedMimeType);
+    const file = await getFileInfo(fileUri, mimeType);
     const fileSize = Number(file.size) || 0;
     const detectedMime = String(mimeType || file.type || '').toLowerCase();
     const extension = String(file.extension || '').replace('.', '').toLowerCase();
