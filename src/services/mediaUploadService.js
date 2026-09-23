@@ -18,43 +18,42 @@ const getFile = (fileUri) => {
   return file;
 };
 
+const getFileInfo = async (fileSource, providedMimeType = '') => {
+  if (!fileSource) throw new Error('الملف غير موجود');
+
+  // Web: استخدم كائن File الذي يعيده ImagePicker مباشرة.
+  if (typeof File !== 'undefined' && fileSource instanceof File) {
+    const type = String(providedMimeType || fileSource.type || '').toLowerCase();
+    return {
+      size: Number(fileSource.size) || 0,
+      type,
+      extension: type === 'image/png' ? '.png' : type === 'image/webp' ? '.webp' : type.startsWith('image/') ? '.jpg' : '',
+      arrayBuffer: () => fileSource.arrayBuffer(),
+    };
+  }
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(fileSource);
+    if (!response.ok) throw new Error('تعذر الوصول إلى الصورة المحددة');
+    const blob = await response.blob();
+    const type = String(providedMimeType || blob.type || '').toLowerCase();
+    return {
+      size: Number(blob.size) || 0,
+      type,
+      extension: type === 'image/png' ? '.png' : type === 'image/webp' ? '.webp' : type.startsWith('image/') ? '.jpg' : '',
+      arrayBuffer: () => blob.arrayBuffer(),
+    };
+  }
+
+  return getFile(fileSource);
+};
+
 /**
  * يقرأ الملف من الجهاز على iOS/Android، أو من URI الخاص بالويب.
  * في React Native Web يعيد Expo ImagePicker غالباً blob/data URI،
  * وليس مسار ملف محلي يمكن لـ expo-file-system.File قراءته مباشرة.
  */
-const getFileInfo = async (fileUri, providedMimeType = '') => {
-  if (!fileUri) throw new Error('مسار الملف غير موجود');
 
-  if (Platform.OS === 'web') {
-    const response = await fetch(fileUri);
-    if (!response.ok) throw new Error('تعذر الوصول إلى الصورة المحددة');
-
-    const blob = await response.blob();
-    const type = String(providedMimeType || blob.type || '').toLowerCase();
-
-    return {
-      size: Number(blob.size) || 0,
-      type,
-      extension: type.startsWith('image/')
-        ? (type === 'image/png'
-          ? '.png'
-          : type === 'image/webp'
-            ? '.webp'
-            : '.jpg')
-        : type.startsWith('video/')
-          ? (type.includes('quicktime')
-            ? '.mov'
-            : type.includes('webm')
-              ? '.webm'
-              : '.mp4')
-          : '',
-      arrayBuffer: () => blob.arrayBuffer(),
-    };
-  }
-
-  return getFile(fileUri);
-};
 
 /**
  * ✅ الحصول على حجم الملف
