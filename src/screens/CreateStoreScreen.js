@@ -121,7 +121,8 @@ export default function CreateStoreScreen({ navigation }) {
   const [storeType, setStoreType] = useState('wholesaler');
   const [storeProductsType, setStoreProductsType] = useState('');
   const [storeDesc, setStoreDesc] = useState('');
-  const [storeLogoUri, setStoreLogoUri] = useState(null);\n  const [storeLogoFile, setStoreLogoFile] = useState(null);
+  const [storeLogoUri, setStoreLogoUri] = useState(null);
+  const [storeLogoFile, setStoreLogoFile] = useState(null);
   const [uploadingStoreLogo, setUploadingStoreLogo] = useState(false);
   const [currency, setCurrency] = useState('دج');
   const [storeDocId, setStoreDocId] = useState(null);
@@ -718,7 +719,8 @@ export default function CreateStoreScreen({ navigation }) {
         alert(validation.error);
         return;
       }
-      setStoreLogoUri(imageData.uri);\n      setStoreLogoFile(imageData.file || null);
+      setStoreLogoUri(imageData.uri);
+      setStoreLogoFile(imageData.file || null);
     } catch (error) {
       if (__DEV__) console.error('[CreateStoreScreen] store logo picker error:', error);
       alert(error?.message || 'تعذر اختيار صورة المتجر.');
@@ -740,7 +742,8 @@ export default function CreateStoreScreen({ navigation }) {
       if (storeLogoUri) {
         setUploadingStoreLogo(true);
         try {
-          const logoSource = storeLogoFile || storeLogoUri;\n          const logoUrl = await uploadStoreLogo(logoSource, result.storeId);
+          const logoSource = storeLogoFile || storeLogoUri;
+          const logoUrl = await uploadStoreLogo(logoSource, result.storeId);
           await updateStoreService(result.storeId, { logo_url: logoUrl });
         } catch (logoError) {
           logoWarning = '\n⚠️ تم إنشاء المتجر، لكن تعذر رفع صورة المتجر. يمكنك المحاولة لاحقاً.';
@@ -750,7 +753,8 @@ export default function CreateStoreScreen({ navigation }) {
         }
       }
 
-      setStoreLogoUri(null);\n      setStoreLogoFile(null);
+      setStoreLogoUri(null);
+      setStoreLogoFile(null);
       alert(`✅ تم إنشاء متجرك بنجاح!\n📌 معرف البحث: ${result.storeCode}${logoWarning}`);
       setCurrentScreen('orders');
     } catch (error) {
