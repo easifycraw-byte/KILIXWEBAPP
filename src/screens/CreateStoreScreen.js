@@ -819,7 +819,6 @@ export default function CreateStoreScreen({ navigation }) {
           {[
             { key: 'orders', label: 'إدارة الطلبات', icon: 'shopping-bag' },
             { key: 'inventory', label: 'إدارة المخزون', icon: 'inventory' },
-            { key: 'payments', label: 'المدفوعات والاشتراكات', icon: 'payment' },
             { key: 'history', label: 'السجل', icon: 'history' },
           ].map((item) => (
             <Pressable
