@@ -37,6 +37,9 @@
     ],
     "experiments": {
       "baseUrl": "/KILIXWEBAPP"
+    },
+    "web": {
+      "favicon": "./assets/images/kilix-app-icon.png"
     }
   }
 }
