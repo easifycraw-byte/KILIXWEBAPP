@@ -33,7 +33,12 @@ jobs:
         run: npm ci
 
       - name: Export Expo Web
-        run: npx expo export --platform web
+        run: |
+          npx expo export --platform web
+          # GitHub Pages serves the SPA entry point again when a user refreshes
+          # an internal React Navigation URL instead of returning its own 404.
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
