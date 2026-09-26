@@ -29,6 +29,7 @@ import { createOrder } from '../services/orderService';
 import { getProductReviews, getProductRating } from '../services/reviewService';
 import { getProducts, getProduct, getStoreRatingSummary, getProductUnitsSold } from '../services/productService';
 import { subscribeToProductReviews, subscribeToStoreProducts, subscribeToProductOrders } from '../services/Realtimeservice';
+import GuestAuthModal from '../components/GuestAuthModal';
 
 const BRAND_ORANGE = '#FF6B00';
 
@@ -408,6 +409,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   }, [product?.id, product?.min_order_quantity]);
   const [notes, setNotes] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+  const [guestAuthVisible, setGuestAuthVisible] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
   const [step, setStep] = useState('CUSTOMIZE');
@@ -588,14 +590,21 @@ export default function ProductDetailScreen({ route, navigation }) {
       setFormError('هذا المنتج لم يعد متاحاً من طرف التاجر.');
       return;
     }
-    // الزائر القادم من رابط المنتج يستطيع إكمال الطلب بدون حساب.
+
+    // Only visitors who arrived through a shareable product URL may check out
+    // without an account. Other product-entry paths keep the existing account gate.
+    const isSharedProductLink = Boolean(route.params?.productId);
+    if (!isAuthenticated && !isSharedProductLink) {
+      setGuestAuthVisible(true);
+      return;
+    }
+
     setStep('CUSTOMIZE');
     setGroups([makeEmptyGroup(orderMinQuantity)]);
     setShowErrors(false);
     setFormError('');
     setModalVisible(true);
   };
-
   const quantityWithinOrderRange = totalQty >= orderMinQuantity && totalQty <= orderMaxQuantity;
   const addGroup = () => setGroups((p) => [...p, makeEmptyGroup(orderMinQuantity)]);
   const removeGroup = (id) => setGroups((p) => (p.length > 1 ? p.filter((g) => g.id !== id) : p));
@@ -980,6 +989,20 @@ export default function ProductDetailScreen({ route, navigation }) {
           </Pressable>
         </View>
       </SafeAreaView>
+
+      <GuestAuthModal
+        visible={guestAuthVisible}
+        onClose={() => setGuestAuthVisible(false)}
+        onSignIn={() => {
+          setGuestAuthVisible(false);
+          navigation.navigate('Welcome');
+        }}
+        onCreateAccount={() => {
+          setGuestAuthVisible(false);
+          navigation.navigate('Welcome');
+        }}
+        reason="order"
+      />
 
       <Modal
         visible={modalVisible}
