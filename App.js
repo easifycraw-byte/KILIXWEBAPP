@@ -3,7 +3,7 @@ import React, { useCallback, useEffect } from 'react';
 import { I18nManager, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
-import { NavigationContainer, getPathFromState, getStateFromPath } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import {
   useFonts as useCairoFonts,
@@ -32,52 +32,18 @@ if (!I18nManager.isRTL) {
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const linking = {
-  // The query-string form keeps product links directly openable on GitHub Pages
-  // without requiring a server-side SPA fallback for nested paths.
-  prefixes: [
-    'https://easifycraw-byte.github.io/KILIXWEBAPP',
-    'https://easifycraw-byte.github.io/KILIXWEBAPP/',
-    'kilix://',
-  ],
-  getStateFromPath(path, options) {
-    const value = String(path || '');
-    const match =
-      value.match(/[?&]product=([^&/#]+)/i) ||
-      value.match(/(?:^|\/)product\/([^?/#]+)/i);
+const navigationRef = createNavigationContainerRef();
 
-    if (match?.[1]) {
-      let productId = match[1];
-      try {
-        productId = decodeURIComponent(productId);
-      } catch (_) {
-        // Keep the raw value if decoding fails.
-      }
-      return {
-        routes: [
-          {
-            name: 'ProductDetail',
-            params: { productId },
-          },
-        ],
-      };
-    }
+const navigateToSharedProduct = () => {
+  if (!navigationRef.isReady() || typeof window === 'undefined') return;
 
-    return getStateFromPath(path, options);
-  },
-  getPathFromState(state, options) {
-    const productRoute = state?.routes?.find((route) => route?.name === 'ProductDetail');
-    const productId =
-      productRoute?.params?.productId ||
-      productRoute?.params?.product?.id ||
-      null;
+  const params = new URLSearchParams(window.location.search || '');
+  const productId = params.get('product');
+  if (!productId) return;
 
-    if (productRoute && productId) {
-      return `?product=${encodeURIComponent(String(productId))}`;
-    }
-
-    return getPathFromState(state, options);
-  },
+  navigationRef.navigate('ProductDetail', {
+    productId: decodeURIComponent(productId),
+  });
 };
 
 export default function App() {
@@ -113,7 +79,7 @@ export default function App() {
               <FavoritesProvider>
                 <View style={[styles.container, { backgroundColor: colors.background }]} onLayout={hideSplashScreen}>
                   <StatusBar style="dark" />
-                  <NavigationContainer linking={linking}>
+                  <NavigationContainer ref={navigationRef} onReady={navigateToSharedProduct}>
                     <RootNavigator />
                   </NavigationContainer>
                 </View>
