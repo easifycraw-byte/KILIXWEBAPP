@@ -29,10 +29,7 @@ const mapOrder = (row) => ({
 });
 
 export async function createOrder({ storeId, productId, customerName, phone, deliveryType, wilaya, commune, streetAddress, notes, quantity, details }) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const rpcName = sessionData?.session?.user ? 'create_order' : 'create_guest_order';
-
-  const { data, error } = await supabase.rpc(rpcName, {
+  const { data, error } = await supabase.rpc('create_order', {
     p_store_id: storeId,
     p_product_id: productId,
     p_customer_name: customerName,
