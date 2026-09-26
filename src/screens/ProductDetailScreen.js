@@ -345,21 +345,31 @@ function makeEmptyGroup(minQty = 1) {
 
 export default function ProductDetailScreen({ route, navigation }) {
   const routeProduct = route.params?.product;
+  const routeProductId = route.params?.productId || routeProduct?.id || null;
   const [loadedProduct, setLoadedProduct] = useState(null);
   const [productUnavailable, setProductUnavailable] = useState(false);
+  const [loadingProduct, setLoadingProduct] = useState(!routeProduct && !!routeProductId);
   const product = loadedProduct || routeProduct;
   useEffect(() => {
     let active = true;
-    const id = routeProduct?.id;
-    if (!id) return undefined;
+    const id = routeProductId;
+    if (!id) {
+      setLoadingProduct(false);
+      return undefined;
+    }
 
     // Always hydrate from the authoritative product row so the order dialog
     // displays the exact options published by the merchant (sizes/colors/RAM/storage)
     // and the real product images, regardless of how the screen was navigated to.
+    setLoadingProduct(!routeProduct);
     void getProduct(id)
       .then((row) => {
         if (!active || !row || row.is_active === false) {
-          if (active) { setLoadedProduct(null); setProductUnavailable(true); }
+          if (active) {
+            setLoadedProduct(null);
+            setProductUnavailable(true);
+            setLoadingProduct(false);
+          }
           return;
         }
         setProductUnavailable(false);
@@ -369,11 +379,18 @@ export default function ProductDetailScreen({ route, navigation }) {
           storeId: row.store_id || routeProduct?.storeId,
           store_id: row.store_id || routeProduct?.store_id,
         });
+        setLoadingProduct(false);
       })
-      .catch(() => { if (active) { setLoadedProduct(null); setProductUnavailable(true); } });
+      .catch(() => {
+        if (active) {
+          setLoadedProduct(null);
+          setProductUnavailable(true);
+          setLoadingProduct(false);
+        }
+      });
 
     return () => { active = false; };
-  }, [routeProduct]);
+  }, [routeProductId]);
 
   const galleryImages = product?.images?.length
     ? product.images
@@ -384,7 +401,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const variantGroups = useMemo(() => getProductVariantGroups(product) || [], [product]);
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [groups, setGroups] = useState([makeEmptyGroup(1)]);
   useEffect(() => {
@@ -392,8 +409,8 @@ export default function ProductDetailScreen({ route, navigation }) {
   }, [product?.id, product?.min_order_quantity]);
   const [notes, setNotes] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [showErrors, setShowErrors] = useState(false);
   const [guestAuthVisible, setGuestAuthVisible] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const [step, setStep] = useState('CUSTOMIZE');
   const [fullName, setFullName] = useState('');
@@ -557,9 +574,11 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const handleShareProduct = async () => {
     try {
+      if (!product?.id) return;
+      const productUrl = `https://easifycraw-byte.github.io/KILIXWEBAPP/?product=${encodeURIComponent(String(product.id))}`;
       await Share.share({
         title: product?.title || 'تفاصيل المنتج',
-        message: `شاهد هذا المنتج الرائع: ${product?.title || 'المنتج'}\nالسعر: ${priceVal} ${currency}`,
+        message: `شاهد هذا المنتج الرائع: ${product?.title || 'المنتج'}\nالسعر: ${priceVal} ${currency}\n${productUrl}`,
       });
     } catch (error) {
       if (__DEV__) console.log('Error sharing product:', error);
@@ -571,27 +590,21 @@ export default function ProductDetailScreen({ route, navigation }) {
       setFormError('هذا المنتج لم يعد متاحاً من طرف التاجر.');
       return;
     }
-    if (user && user.isGuest) {
+
+    // Only visitors who arrived through a shareable product URL may check out
+    // without an account. Other product-entry paths keep the existing account gate.
+    const isSharedProductLink = Boolean(route.params?.productId);
+    if (!isAuthenticated && !isSharedProductLink) {
       setGuestAuthVisible(true);
       return;
     }
+
     setStep('CUSTOMIZE');
     setGroups([makeEmptyGroup(orderMinQuantity)]);
     setShowErrors(false);
     setFormError('');
     setModalVisible(true);
   };
-
-  const handleGuestSignIn = () => {
-    setGuestAuthVisible(false);
-    navigation.navigate('Welcome');
-  };
-
-  const handleGuestCreateAccount = () => {
-    setGuestAuthVisible(false);
-    navigation.navigate('Welcome');
-  };
-
   const quantityWithinOrderRange = totalQty >= orderMinQuantity && totalQty <= orderMaxQuantity;
   const addGroup = () => setGroups((p) => [...p, makeEmptyGroup(orderMinQuantity)]);
   const removeGroup = (id) => setGroups((p) => (p.length > 1 ? p.filter((g) => g.id !== id) : p));
@@ -742,6 +755,28 @@ export default function ProductDetailScreen({ route, navigation }) {
       </View>
     </Pressable>
   );
+
+  if (!product && loadingProduct) {
+    return (
+      <View style={[s.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.charcoalText }}>جارٍ تحميل المنتج...</Text>
+      </View>
+    );
+  }
+
+  if (!product && productUnavailable) {
+    return (
+      <View style={[s.container, { alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg }]}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.charcoalText, textAlign: 'center' }}>هذا المنتج غير متاح حالياً</Text>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={{ marginTop: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: BRAND_ORANGE }}
+        >
+          <Text style={{ color: colors.white, fontWeight: '800' }}>العودة</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={s.container}>
@@ -958,9 +993,15 @@ export default function ProductDetailScreen({ route, navigation }) {
       <GuestAuthModal
         visible={guestAuthVisible}
         onClose={() => setGuestAuthVisible(false)}
-        onSignIn={handleGuestSignIn}
-        onCreateAccount={handleGuestCreateAccount}
-        reason="cart"
+        onSignIn={() => {
+          setGuestAuthVisible(false);
+          navigation.navigate('Welcome');
+        }}
+        onCreateAccount={() => {
+          setGuestAuthVisible(false);
+          navigation.navigate('Welcome');
+        }}
+        reason="order"
       />
 
       <Modal
@@ -1223,17 +1264,45 @@ export default function ProductDetailScreen({ route, navigation }) {
                 <View style={s.successIcon}>
                   <MaterialIcons name="check-circle" size={54} color={colors.success} />
                 </View>
-                <Text style={s.successTitle}>تم إنشاء طلبية بنجاح!</Text>
-                <Text style={s.successSub}>
-                  تم تسجيل طلبك ومعالجته بنجاح، سنتواصل معك قريباً لتأكيد التوصيل.
-                </Text>
-                <PrimaryButton title="الذهاب إلى السلة" variant="navy" onPress={goToCart} />
-                <PrimaryButton
-                  title="متابعة التسوق"
-                  variant="outline"
-                  onPress={continueShopping}
-                  style={{ marginTop: spacing.sm }}
-                />
+
+                {!isAuthenticated ? (
+                  <>
+                    <Text style={s.successTitle}>تم إنشاء طلبك بنجاح!</Text>
+                    <Text style={s.successSub}>
+                      أنشئ حسابك وتصفح المنتجات واحصل على سوق الجملة في هاتفك.
+                    </Text>
+
+                    <PrimaryButton
+                      title="إنشاء حساب"
+                      variant="navy"
+                      onPress={() => {
+                        setModalVisible(false);
+                        navigation.navigate('Welcome');
+                      }}
+                    />
+
+                    <PrimaryButton
+                      title="متابعة التصفح"
+                      variant="outline"
+                      onPress={continueShopping}
+                      style={{ marginTop: spacing.sm }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Text style={s.successTitle}>تم إنشاء طلبية بنجاح!</Text>
+                    <Text style={s.successSub}>
+                      تم تسجيل طلبك ومعالجته بنجاح، سنتواصل معك قريباً لتأكيد التوصيل.
+                    </Text>
+                    <PrimaryButton title="الذهاب إلى السلة" variant="navy" onPress={goToCart} />
+                    <PrimaryButton
+                      title="متابعة التسوق"
+                      variant="outline"
+                      onPress={continueShopping}
+                      style={{ marginTop: spacing.sm }}
+                    />
+                  </>
+                )}
               </View>
             )}
           </View>
