@@ -3,7 +3,7 @@ import React, { useCallback, useEffect } from 'react';
 import { I18nManager, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, getPathFromState, getStateFromPath } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import {
   useFonts as useCairoFonts,
@@ -31,6 +31,54 @@ if (!I18nManager.isRTL) {
 }
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const linking = {
+  // The query-string form keeps product links directly openable on GitHub Pages
+  // without requiring a server-side SPA fallback for nested paths.
+  prefixes: [
+    'https://easifycraw-byte.github.io/KILIXWEBAPP',
+    'https://easifycraw-byte.github.io/KILIXWEBAPP/',
+    'kilix://',
+  ],
+  getStateFromPath(path, options) {
+    const value = String(path || '');
+    const match =
+      value.match(/[?&]product=([^&/#]+)/i) ||
+      value.match(/(?:^|\/)product\/([^?/#]+)/i);
+
+    if (match?.[1]) {
+      let productId = match[1];
+      try {
+        productId = decodeURIComponent(productId);
+      } catch (_) {
+        // Keep the raw value if decoding fails.
+      }
+      return {
+        routes: [
+          {
+            name: 'ProductDetail',
+            params: { productId },
+          },
+        ],
+      };
+    }
+
+    return getStateFromPath(path, options);
+  },
+  getPathFromState(state, options) {
+    const productRoute = state?.routes?.find((route) => route?.name === 'ProductDetail');
+    const productId =
+      productRoute?.params?.productId ||
+      productRoute?.params?.product?.id ||
+      null;
+
+    if (productRoute && productId) {
+      return `?product=${encodeURIComponent(String(productId))}`;
+    }
+
+    return getPathFromState(state, options);
+  },
+};
 
 export default function App() {
   const [fontsLoaded, fontError] = useCairoFonts({
@@ -65,7 +113,7 @@ export default function App() {
               <FavoritesProvider>
                 <View style={[styles.container, { backgroundColor: colors.background }]} onLayout={hideSplashScreen}>
                   <StatusBar style="dark" />
-                  <NavigationContainer>
+                  <NavigationContainer linking={linking}>
                     <RootNavigator />
                   </NavigationContainer>
                 </View>
