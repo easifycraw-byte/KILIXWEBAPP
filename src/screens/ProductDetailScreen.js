@@ -345,21 +345,31 @@ function makeEmptyGroup(minQty = 1) {
 
 export default function ProductDetailScreen({ route, navigation }) {
   const routeProduct = route.params?.product;
+  const routeProductId = route.params?.productId || routeProduct?.id || null;
   const [loadedProduct, setLoadedProduct] = useState(null);
   const [productUnavailable, setProductUnavailable] = useState(false);
+  const [loadingProduct, setLoadingProduct] = useState(!routeProduct && !!routeProductId);
   const product = loadedProduct || routeProduct;
   useEffect(() => {
     let active = true;
-    const id = routeProduct?.id;
-    if (!id) return undefined;
+    const id = routeProductId;
+    if (!id) {
+      setLoadingProduct(false);
+      return undefined;
+    }
 
     // Always hydrate from the authoritative product row so the order dialog
     // displays the exact options published by the merchant (sizes/colors/RAM/storage)
     // and the real product images, regardless of how the screen was navigated to.
+    setLoadingProduct(!routeProduct);
     void getProduct(id)
       .then((row) => {
         if (!active || !row || row.is_active === false) {
-          if (active) { setLoadedProduct(null); setProductUnavailable(true); }
+          if (active) {
+            setLoadedProduct(null);
+            setProductUnavailable(true);
+            setLoadingProduct(false);
+          }
           return;
         }
         setProductUnavailable(false);
@@ -369,11 +379,18 @@ export default function ProductDetailScreen({ route, navigation }) {
           storeId: row.store_id || routeProduct?.storeId,
           store_id: row.store_id || routeProduct?.store_id,
         });
+        setLoadingProduct(false);
       })
-      .catch(() => { if (active) { setLoadedProduct(null); setProductUnavailable(true); } });
+      .catch(() => {
+        if (active) {
+          setLoadedProduct(null);
+          setProductUnavailable(true);
+          setLoadingProduct(false);
+        }
+      });
 
     return () => { active = false; };
-  }, [routeProduct]);
+  }, [routeProductId]);
 
   const galleryImages = product?.images?.length
     ? product.images
@@ -557,9 +574,11 @@ export default function ProductDetailScreen({ route, navigation }) {
 
   const handleShareProduct = async () => {
     try {
+      if (!product?.id) return;
+      const productUrl = `https://easifycraw-byte.github.io/KILIXWEBAPP/?product=${encodeURIComponent(String(product.id))}`;
       await Share.share({
         title: product?.title || 'تفاصيل المنتج',
-        message: `شاهد هذا المنتج الرائع: ${product?.title || 'المنتج'}\nالسعر: ${priceVal} ${currency}`,
+        message: `شاهد هذا المنتج الرائع: ${product?.title || 'المنتج'}\nالسعر: ${priceVal} ${currency}\n${productUrl}`,
       });
     } catch (error) {
       if (__DEV__) console.log('Error sharing product:', error);
@@ -742,6 +761,28 @@ export default function ProductDetailScreen({ route, navigation }) {
       </View>
     </Pressable>
   );
+
+  if (!product && loadingProduct) {
+    return (
+      <View style={[s.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.charcoalText }}>جارٍ تحميل المنتج...</Text>
+      </View>
+    );
+  }
+
+  if (!product && productUnavailable) {
+    return (
+      <View style={[s.container, { alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg }]}>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.charcoalText, textAlign: 'center' }}>هذا المنتج غير متاح حالياً</Text>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={{ marginTop: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: BRAND_ORANGE }}
+        >
+          <Text style={{ color: colors.white, fontWeight: '800' }}>العودة</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={s.container}>
