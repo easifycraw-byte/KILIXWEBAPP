@@ -29,7 +29,6 @@ import { createOrder } from '../services/orderService';
 import { getProductReviews, getProductRating } from '../services/reviewService';
 import { getProducts, getProduct, getStoreRatingSummary, getProductUnitsSold } from '../services/productService';
 import { subscribeToProductReviews, subscribeToStoreProducts, subscribeToProductOrders } from '../services/Realtimeservice';
-import GuestAuthModal from '../components/GuestAuthModal';
 
 const BRAND_ORANGE = '#FF6B00';
 
@@ -401,7 +400,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const variantGroups = useMemo(() => getProductVariantGroups(product) || [], [product]);
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [groups, setGroups] = useState([makeEmptyGroup(1)]);
   useEffect(() => {
@@ -410,7 +409,6 @@ export default function ProductDetailScreen({ route, navigation }) {
   const [notes, setNotes] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
-  const [guestAuthVisible, setGuestAuthVisible] = useState(false);
 
   const [step, setStep] = useState('CUSTOMIZE');
   const [fullName, setFullName] = useState('');
@@ -590,25 +588,12 @@ export default function ProductDetailScreen({ route, navigation }) {
       setFormError('هذا المنتج لم يعد متاحاً من طرف التاجر.');
       return;
     }
-    if (user && user.isGuest) {
-      setGuestAuthVisible(true);
-      return;
-    }
+    // الزائر القادم من رابط المنتج يستطيع إكمال الطلب بدون حساب.
     setStep('CUSTOMIZE');
     setGroups([makeEmptyGroup(orderMinQuantity)]);
     setShowErrors(false);
     setFormError('');
     setModalVisible(true);
-  };
-
-  const handleGuestSignIn = () => {
-    setGuestAuthVisible(false);
-    navigation.navigate('Welcome');
-  };
-
-  const handleGuestCreateAccount = () => {
-    setGuestAuthVisible(false);
-    navigation.navigate('Welcome');
   };
 
   const quantityWithinOrderRange = totalQty >= orderMinQuantity && totalQty <= orderMaxQuantity;
@@ -996,14 +981,6 @@ export default function ProductDetailScreen({ route, navigation }) {
         </View>
       </SafeAreaView>
 
-      <GuestAuthModal
-        visible={guestAuthVisible}
-        onClose={() => setGuestAuthVisible(false)}
-        onSignIn={handleGuestSignIn}
-        onCreateAccount={handleGuestCreateAccount}
-        reason="cart"
-      />
-
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -1264,17 +1241,45 @@ export default function ProductDetailScreen({ route, navigation }) {
                 <View style={s.successIcon}>
                   <MaterialIcons name="check-circle" size={54} color={colors.success} />
                 </View>
-                <Text style={s.successTitle}>تم إنشاء طلبية بنجاح!</Text>
-                <Text style={s.successSub}>
-                  تم تسجيل طلبك ومعالجته بنجاح، سنتواصل معك قريباً لتأكيد التوصيل.
-                </Text>
-                <PrimaryButton title="الذهاب إلى السلة" variant="navy" onPress={goToCart} />
-                <PrimaryButton
-                  title="متابعة التسوق"
-                  variant="outline"
-                  onPress={continueShopping}
-                  style={{ marginTop: spacing.sm }}
-                />
+
+                {!isAuthenticated ? (
+                  <>
+                    <Text style={s.successTitle}>تم إنشاء طلبك بنجاح!</Text>
+                    <Text style={s.successSub}>
+                      أنشئ حسابك وتصفح المنتجات واحصل على سوق الجملة في هاتفك.
+                    </Text>
+
+                    <PrimaryButton
+                      title="إنشاء حساب"
+                      variant="navy"
+                      onPress={() => {
+                        setModalVisible(false);
+                        navigation.navigate('Welcome');
+                      }}
+                    />
+
+                    <PrimaryButton
+                      title="متابعة التصفح"
+                      variant="outline"
+                      onPress={continueShopping}
+                      style={{ marginTop: spacing.sm }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Text style={s.successTitle}>تم إنشاء طلبية بنجاح!</Text>
+                    <Text style={s.successSub}>
+                      تم تسجيل طلبك ومعالجته بنجاح، سنتواصل معك قريباً لتأكيد التوصيل.
+                    </Text>
+                    <PrimaryButton title="الذهاب إلى السلة" variant="navy" onPress={goToCart} />
+                    <PrimaryButton
+                      title="متابعة التسوق"
+                      variant="outline"
+                      onPress={continueShopping}
+                      style={{ marginTop: spacing.sm }}
+                    />
+                  </>
+                )}
               </View>
             )}
           </View>
