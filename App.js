@@ -37,12 +37,22 @@ const navigationRef = createNavigationContainerRef();
 const navigateToSharedProduct = () => {
   if (!navigationRef.isReady() || typeof window === 'undefined') return;
 
-  const params = new URLSearchParams(window.location.search || '');
-  const productId = params.get('product');
+  const searchParams = new URLSearchParams(window.location.search || '');
+  const hash = String(window.location.hash || '');
+  const hashMatch = hash.match(/^#(?:product|productId)=([^&/#]+)/i);
+  const productId = searchParams.get('product') || hashMatch?.[1];
+
   if (!productId) return;
 
+  let decodedProductId = productId;
+  try {
+    decodedProductId = decodeURIComponent(productId);
+  } catch (_) {
+    // Keep the original ID if it is already decoded or malformed.
+  }
+
   navigationRef.navigate('ProductDetail', {
-    productId: decodeURIComponent(productId),
+    productId: decodedProductId,
   });
 };
 
