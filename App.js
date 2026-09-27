@@ -1,9 +1,9 @@
 import 'react-native-gesture-handler';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { I18nManager, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import {
   useFonts as useCairoFonts,
@@ -32,44 +32,9 @@ if (!I18nManager.isRTL) {
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const navigationRef = createNavigationContainerRef();
 
-function SharedProductRedirect({ navigationReady }) {
-  const { initializing } = require('./src/context/AuthContext').useAuth();
-  const handledRef = useRef(false);
-
-  useEffect(() => {
-    if (!navigationReady || initializing || handledRef.current) return;
-    if (typeof window === 'undefined' || !navigationRef.isReady()) return;
-
-    const searchParams = new URLSearchParams(window.location.search || '');
-    const hash = String(window.location.hash || '');
-    const hashMatch = hash.match(/^#(?:product|productId)=([^&/#]+)/i);
-    const rawProductId = searchParams.get('product') || hashMatch?.[1];
-
-    if (!rawProductId) return;
-
-    let productId = rawProductId;
-    try {
-      productId = decodeURIComponent(rawProductId);
-    } catch (_) {
-      // Keep the original ID if decoding fails.
-    }
-
-    if (!productId) return;
-
-    handledRef.current = true;
-    navigationRef.reset({
-      index: 0,
-      routes: [{ name: 'ProductDetail', params: { productId } }],
-    });
-  }, [navigationReady, initializing]);
-
-  return null;
-}
 
 export default function App() {
-  const [navigationReady, setNavigationReady] = useState(false);
   const [fontsLoaded, fontError] = useCairoFonts({
     Cairo_400Regular,
     Cairo_600SemiBold,
@@ -97,16 +62,12 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <AuthProvider>
-          <SharedProductRedirect navigationReady={navigationReady} />
           <DataProvider>
             <CartProvider>
               <FavoritesProvider>
                 <View style={[styles.container, { backgroundColor: colors.background }]} onLayout={hideSplashScreen}>
                   <StatusBar style="dark" />
-                  <NavigationContainer
-                    ref={navigationRef}
-                    onReady={() => setNavigationReady(true)}
-                  >
+                  <NavigationContainer>
                     <RootNavigator />
                   </NavigationContainer>
                 </View>
