@@ -33,8 +33,24 @@ import StoreDetailScreen from '../screens/StoreDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
+const getSharedProductId = () => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const searchParams = new URLSearchParams(window.location.search || '');
+    const hash = String(window.location.hash || '');
+    const hashMatch = hash.match(/^#(?:product|productId)=([^&/#]+)/i);
+    const rawId = searchParams.get('product') || hashMatch?.[1];
+    if (!rawId) return null;
+    return decodeURIComponent(rawId);
+  } catch (_) {
+    return null;
+  }
+};
+
 export default function RootNavigator() {
   const { initializing, isAuthenticated, user } = useAuth();
+  const sharedProductId = getSharedProductId();
 
   // عرض شاشة تحميل بيضاء خالية من الوميض ريثما يتحقق النظام من حالة المصادقة
   if (initializing) {
@@ -51,6 +67,7 @@ export default function RootNavigator() {
 
   // تحديد الشاشة الأولى بشكل صارم وآمن تماماً
   const getInitialRoute = () => {
+    if (sharedProductId) return 'ProductDetail';
     if (!isAuthenticated || !user) return 'Welcome';
     return 'Main';
   };
@@ -72,7 +89,11 @@ export default function RootNavigator() {
 
       {/* Screens pushed on top of the tabs */}
       <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
-      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <Stack.Screen
+        name="ProductDetail"
+        component={ProductDetailScreen}
+        initialParams={sharedProductId ? { productId: sharedProductId } : undefined}
+      />
       <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
