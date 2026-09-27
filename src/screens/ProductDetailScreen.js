@@ -575,7 +575,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const handleShareProduct = async () => {
     try {
       if (!product?.id) return;
-      const productUrl = `https://easifycraw-byte.github.io/KILIXWEBAPP/?product=${encodeURIComponent(String(product.id))}`;
+      const productUrl = `https://easifycraw-byte.github.io/KILIXWEBAPP/#product=${encodeURIComponent(String(product.id))}`;
       await Share.share({
         title: product?.title || 'تفاصيل المنتج',
         message: `شاهد هذا المنتج الرائع: ${product?.title || 'المنتج'}\nالسعر: ${priceVal} ${currency}\n${productUrl}`,
