@@ -59,7 +59,10 @@ function SharedProductRedirect({ navigationReady }) {
     if (!productId) return;
 
     handledRef.current = true;
-    navigationRef.navigate('ProductDetail', { productId });
+    navigationRef.reset({
+      index: 0,
+      routes: [{ name: 'ProductDetail', params: { productId } }],
+    });
   }, [navigationReady, initializing]);
 
   return null;
